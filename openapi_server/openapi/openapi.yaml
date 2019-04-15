@@ -1,0 +1,122 @@
+openapi: 3.0.0
+info:
+  license:
+    name: MIT
+  title: Data Processor
+  version: 1.0.0
+servers:
+- url: http://data-processor.automl.local
+paths:
+  /sample:
+    post:
+      operationId: sample_datasource
+      requestBody:
+        $ref: '#/components/requestBodies/SampleResponse'
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SampleResponse'
+          description: Список колонок
+      summary: Выполняет предварительный анализ данных на куске файла
+      x-openapi-router-controller: openapi_server.controllers.default_controller
+components:
+  requestBodies:
+    SampleResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SampleBody'
+  schemas:
+    BasicColumn:
+      properties:
+        type:
+          description: Тип колонки
+          enum:
+          - ID
+          - NUMERIC
+          - CATEGORICAL
+          type: string
+        name:
+          description: Название колонки
+          type: string
+      required:
+      - name
+      - type
+    IdColumn:
+      allOf:
+      - $ref: '#/components/schemas/BasicColumn'
+    NumericColumn:
+      allOf:
+      - $ref: '#/components/schemas/BasicColumn'
+      - properties:
+          min:
+            description: Минимальное значение
+            type: number
+          max:
+            description: Максимальное значение
+            type: number
+          percent_missing:
+            description: Процент отсутствующих значений
+            type: number
+        required:
+        - max
+        - min
+        - percent_missing
+        type: object
+    CategoricalColumn:
+      allOf:
+      - $ref: '#/components/schemas/BasicColumn'
+      - properties:
+          categories:
+            description: Минимальное значение
+            items:
+              type: string
+            type: array
+          percent_missing:
+            description: Процент отсутствующих значений
+            type: number
+        required:
+        - categories
+        - percent_missing
+        type: object
+    Columns:
+      items:
+        anyOf:
+        - $ref: '#/components/schemas/NumericColumn'
+        - $ref: '#/components/schemas/CategoricalColumn'
+        - $ref: '#/components/schemas/IdColumn'
+        discriminator:
+          mapping:
+            NUMERIC: '#/components/schemas/NumericColumn'
+            CATEGORICAL: '#/components/schemas/CategoricalColumn'
+            ID: '#/components/schemas/IdColumn'
+          propertyName: type
+      type: array
+    SampleBody:
+      example:
+        file: file
+        delimiter: delimiter
+      properties:
+        file:
+          description: Ссылка на файл
+          type: string
+        delimiter:
+          description: Разделитель колонок в файле
+          type: string
+      required:
+      - file
+      type: object
+    SampleResponse:
+      example:
+        columns:
+        - null
+        - null
+      properties:
+        columns:
+          items:
+            $ref: '#/components/schemas/Columns'
+          type: array
+      required:
+      - columns
